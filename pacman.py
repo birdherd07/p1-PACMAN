@@ -1,18 +1,20 @@
 import pygame
 from pacman_ai import PacmanAI
+from level import Level
+from ghost import Ghost
 import sys
 
 # Initialize Pygame
 pygame.init()
 
 # ---------- Window Configuration ----------
-WIDTH, HEIGHT = 500, 500
+WIDTH, HEIGHT = 480, 480
 window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("PACMAN - AI Agent")
 
 # Try to load icon (if exists)
 try:
-    icon = pygame.image.load('PACicon.png')
+    icon = pygame.image.load('assets/PACicon.png')
     pygame.display.set_icon(icon)
 except Exception:
     pass  # Icon is optional
@@ -20,32 +22,12 @@ except Exception:
 clock = pygame.time.Clock()
 
 # ---------- Grid / Maze Configuration ----------
-CELL = 25  # Each cell is 25x25 pixels
-GRID_W, GRID_H = WIDTH // CELL, HEIGHT // CELL  # 20x20 grid
+CELL = 32  # Each cell is 32x32 pixels
+GRID_W, GRID_H = WIDTH // CELL, HEIGHT // CELL  # 15x15 grid
 
 # Create maze: 0=open path, 1=wall
-# Start with all open, then add walls
-maze = [[0 for _ in range(GRID_W)] for _ in range(GRID_H)]
-
-# Add border walls
-for x in range(GRID_W):
-    maze[0][x] = 1  # Top wall
-    maze[GRID_H-1][x] = 1  # Bottom wall
-for y in range(GRID_H):
-    maze[y][0] = 1  # Left wall
-    maze[y][GRID_W-1] = 1  # Right wall
-
-# Add some internal walls to make it interesting
-# Horizontal wall in middle with gaps
-for x in range(3, GRID_W - 3):
-    if x != GRID_W // 2 and x != GRID_W // 2 - 1:  # Leave gaps
-        maze[GRID_H//2][x] = 1
-
-# Vertical walls
-for y in range(3, GRID_H - 3):
-    if y != GRID_H // 2 and y != GRID_H // 2 - 1:  # Leave gaps
-        maze[y][GRID_W//3] = 1
-        maze[y][2*GRID_W//3] = 1
+grid = Level()
+maze = grid.maze
 
 # ---------- Game Elements ----------
 # Place pellets in all open spaces (except Pac-Man's start)
@@ -63,6 +45,12 @@ total_pellets = len(pellets)
 # ---------- Pac-Man AI Agent ----------
 pacman_start = (1, 1)
 pacman = PacmanAI(start_pos=pacman_start, maze=maze)
+
+# ---------- Ghost obstacles ----------
+ghost_info = {"Inky": (13, 1), "Blinky": (1, 13), "Pinky": (13, 13), "Clyde": (7,7)}
+ghosts = [] 
+for key in ghost_info:
+    ghosts.append(Ghost(key, ghost_info[key], maze))
 
 # ---------- Helper Functions ----------
 def nearest_pellet(pos, pellets_set):
@@ -83,14 +71,17 @@ def draw():
     # Draw maze walls
     for y in range(GRID_H):
         for x in range(GRID_W):
-            if maze[y][x] == 1:
-                pygame.draw.rect(window, (0, 0, 255), (x*CELL, y*CELL, CELL, CELL))
-                pygame.draw.rect(window, (0, 0, 150), (x*CELL, y*CELL, CELL, CELL), 2)
+                window.blit(grid.tiles[maze[y][x]], (x*CELL, y*CELL))
     
     # Draw pellets
     for (px, py) in pellets:
         cx, cy = grid_to_pixel((px, py))
-        pygame.draw.circle(window, (255, 255, 255), (cx, cy), CELL//6)
+        pygame.draw.circle(window, (255, 255, 255), (cx, cy), CELL//8)
+
+    # Draw Ghosts
+    for ghost in ghosts:
+        gx, gy = ghost.get_position()
+        window.blit(ghost.image, (gx * CELL, gy * CELL))
     
     # Draw Pac-Man's path (optional visualization)
     if pacman.path:
@@ -149,11 +140,11 @@ while running:
                 # Space to pause/unpause
                 MOVE_DELAY = 1000 if MOVE_DELAY == 200 else 200
                 print(f"Speed changed: {'Slow' if MOVE_DELAY == 1000 else 'Normal'}")
-    
-    # Move Pac-Man at intervals
+
+    # Move Pac-Man and ghosts at intervals
     if current_time - last_move_time > MOVE_DELAY:
         last_move_time = current_time
-        
+
         # Check if Pac-Man reached a pellet
         if pacman.pos in pellets:
             pellets.remove(pacman.pos)
@@ -172,6 +163,15 @@ while running:
             target = nearest_pellet(pacman.pos, pellets)
             if target:
                 pacman.set_target(target)
+
+        #Move Ghosts one step
+        for ghost in ghosts:
+            ghost.move_to_pacman(pacman.pos)
+            #Update ghost info
+            ghost_info[ghost.name] = ghost.pos
+
+            #if ghost.get_position() == pacman.pos:
+            #    print("Ghost caught Pac-Man!")
     
     # Draw everything
     draw()

@@ -2,7 +2,7 @@
 
 ## Team Members
 - **Liu** - Pac-Man AI Pathfinding (BFS Algorithm)
-- **Rachel** - Maze Design and Game Framework
+- **Rachel** - Maze Design and Ghosts
 - **Yogitha** - Score Tracking System
 
 ## Project Overview
@@ -28,6 +28,25 @@ This project implements an intelligent PACMAN game where the PACMAN character ac
    - Returns the shortest path when goal is found
 4. **Movement**: Pac-Man follows the computed path step-by-step
 
+## Rachel: Maze and Ghosts
+
+### Implementation Details
+- **Algorithm Used**: A* Algorithm
+- **Files**: `level.py, ghost.py`
+- **Key Features**:
+  - Pathfinding shortest path to Pac-Man
+  - 2D Maze representation
+  - Custom level sprites
+
+### How the A* Algorithm Works
+1. **Start**: Ghost's current position
+2. **Goal**: Pac-Man's current position
+3. **Process**:
+   - Uses a priority queue to explore cells with lowest cost
+   - manhattan_distance: The heuristic function, h(n). It calculates the distance by only allowing movement along the grid axes (horizontal and vertical).
+   - g_costs: A dictionary storing the shortest actual distance g(n) from the start node to every other reachable node.
+   - Loop Logic: The core loop continuously extracts the lowest-f(n) node, checks if it's the goal, and then explores its neighbors. It updates a neighbor's path only if a shorter g(n) is discovered.
+
 ### Code Structure
 ```python
 class PacmanAI:
@@ -35,6 +54,14 @@ class PacmanAI:
     - bfs(): Core search algorithm
     - set_target(): Compute path to target pellet
     - step(): Move one cell along the path
+
+class Ghost:
+    - __init__(): Initialize with name, starting position and maze
+    - find_path(): A* algorithm
+    - move_to_pacman(): Update position with next coordinate in the path
+
+class Level:
+    - __init__(): Initialize maze layout and tile sprites for display
 ```
 
 ## Running the Game
@@ -88,6 +115,7 @@ python3 pacman.py
 ### Tools Used
 - **ChatGPT**: Initial project setup, environment configuration
 - **Claude**: Code refinement, BFS implementation, documentation
+- **Gemini**: Maze generation, A* implementation
 
 ### Specific AI Assistance
 
@@ -106,6 +134,17 @@ python3 pacman.py
 - **AI Response**: Explained SDL2 dependency issue on macOS
 - **Modification**: Installed SDL2 via Homebrew before pygame
 
+#### Maze generation
+- **Prompt**: "Generate a 15 x 15 pac-man style maze, where a 1 represents a wall and a 0 represents an empty space"
+- **AI Response**: Generated maze
+- **Modification**: Removed 2 dead ends 
+
+#### A* algorithm
+- **Prompt**: "Please generate a python A* pathfinding algorithm for a 2d maze"
+- **AI Response**: Explained A* algorithm and provided implementation with driver
+- **Modification**: Removed driver, customized function parameters to fit within class
+
+
 ### Validation Process
 1. Tested each AI-generated function independently
 2. Verified pathfinding correctness with print statements
@@ -120,10 +159,10 @@ python3 pacman.py
 
 ## Future Improvements
 - [ ] Implement A* algorithm for comparison
-- [ ] Add ghost AI (random walk or chase behavior)
 - [ ] Optimize path recalculation
 - [ ] Add difficulty levels
 - [ ] Implement power-ups
+- [ ] Make unique ghost behavior
 
 ## Testing Instructions
 1. Run `python3 pacman.py`
