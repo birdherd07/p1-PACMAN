@@ -8,7 +8,7 @@ import sys
 pygame.init()
 
 # ---------- Window Configuration ----------
-WIDTH, HEIGHT = 480, 480
+WIDTH, HEIGHT = 500, 500
 window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("PACMAN - AI Agent")
 
@@ -22,8 +22,8 @@ except Exception:
 clock = pygame.time.Clock()
 
 # ---------- Grid / Maze Configuration ----------
-CELL = 32  # Each cell is 32x32 pixels
-GRID_W, GRID_H = WIDTH // CELL, HEIGHT // CELL  # 15x15 grid
+CELL = 20  # Each cell is 25x25 pixels
+GRID_W, GRID_H = WIDTH // CELL, HEIGHT // CELL  # 25x25 grid
 
 # Create maze: 0=open path, 1=wall
 grid = Level()
@@ -47,7 +47,7 @@ pacman_start = (1, 1)
 pacman = PacmanAI(start_pos=pacman_start, maze=maze)
 
 # ---------- Ghost obstacles ----------
-ghost_info = {"Inky": (13, 1), "Blinky": (1, 13), "Pinky": (13, 13), "Clyde": (7,7)}
+ghost_info = {"Inky": (23, 1), "Blinky": (1, 23), "Pinky": (23, 23), "Clyde": (12,12)}
 ghosts = [] 
 for key in ghost_info:
     ghosts.append(Ghost(key, ghost_info[key], maze))

@@ -111,7 +111,6 @@ class Ghost:
     def move_to_pacman(self, pacman_pos):
         """
         Calculates the path to Pac-Man, moves the ghost one step along it.
-        
         :param pacman_pos: Pac-Man's X and Y-coordinate (target).
         """
         current_coords = self.get_position()
