@@ -135,9 +135,9 @@ python3 pacman.py
 - **Modification**: Installed SDL2 via Homebrew before pygame
 
 #### Maze generation
-- **Prompt**: "Generate a 15 x 15 pac-man style maze, where a 1 represents a wall and a 0 represents an empty space"
+- **Prompt**: "Generate a 25 x 25 pac-man style maze, where a 1 represents a wall and a 0 represents an empty space"
 - **AI Response**: Generated maze
-- **Modification**: Removed 2 dead ends 
+- **Modification**: Fixed boundary of maze in 2 rows
 
 #### A* algorithm
 - **Prompt**: "Please generate a python A* pathfinding algorithm for a 2d maze"
