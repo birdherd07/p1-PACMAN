@@ -56,9 +56,16 @@ class PacmanAI:
     - step(): Move one cell along the path
 
 class Ghost:
+   - class GhostState(Enum): Defines the two possible ghost states
+   - class GhostActions(Enum): Defintes the two possible ghost actions
+   - class RandomGhost(Ghost): A type of Ghost that moves randomly
+   - class ChaseGhost(Ghost): A type of Ghost that chases or intercepts Pac-man depending on state
     - __init__(): Initialize with name, starting position and maze
+    - _get_state(): Update and return the current state
+    - intercept_positions(): Return valid positions that are ahead of pac-man for ChaseGhosts
     - find_path(): A* algorithm
-    - move_to_pacman(): Update position with next coordinate in the path
+    - score_actions(): Given the state, return the best action
+    - choose_best_action(): Get the state and possible actions, then execute the best scored action or pick a random action
 
 class Level:
     - __init__(): Initialize maze layout and tile sprites for display

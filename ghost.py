@@ -60,17 +60,6 @@ class Ghost:
         else:
             return GhostState.NORMAL
 
-    def intercept_positions(self, pacman_pos):
-        """
-        Return a list of valid positions that are two spaces ahead of pac-man in each direction.
-        """    
-        valid_positions = []
-        for i in self.MOVES:
-            adjacent = (pacman_pos[0] + (i[0] * 2), pacman_pos[1] + (i[1] * 2))
-            if adjacent[0] < len(self.maze) and adjacent[1] < len(self.maze) and self.maze[adjacent[1]][adjacent[0]] == 0:
-                valid_positions.append(adjacent)
-        return valid_positions
-
 class RandomGhost(Ghost):
     """
     A Pac-Man style ghost that chooses a direction to go at random.
@@ -120,6 +109,17 @@ class ChaseGhost(Ghost):
         self.image = pygame.image.load('assets/ghost.png')
         self.current_path: List[Tuple[int, int]] = []
         self.scared = 0
+
+    def intercept_positions(self, pacman_pos):
+        """
+        Return a list of valid positions that are two spaces ahead of pac-man in each direction.
+        """    
+        valid_positions = []
+        for i in self.MOVES:
+            adjacent = (pacman_pos[0] + (i[0] * 2), pacman_pos[1] + (i[1] * 2))
+            if adjacent[0] < len(self.maze) and adjacent[1] < len(self.maze) and self.maze[adjacent[1]][adjacent[0]] == 0:
+                valid_positions.append(adjacent)
+        return valid_positions
     
     def manhattan_distance(self, p1, p2):
         """Calculates the Manhattan distance heuristic (h(n))."""
