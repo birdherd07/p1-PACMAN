@@ -1,7 +1,7 @@
 import pygame
 from pacman_ai import PacmanAI
 from level import Level
-from ghost import Ghost
+from ghost import RandomGhost, ChaseGhost, GhostActions
 import sys
 
 # Initialize Pygame
@@ -34,7 +34,7 @@ maze = grid.maze
 pellets = set()
 for y in range(GRID_H):
     for x in range(GRID_W):
-        if maze[y][x] == 0 and (x, y) != (1, 1):  # Not at Pac-Man start
+        if maze[y][x] == 0 or maze[y][x] == 2 and (x, y) != (1, 1):  # Not at Pac-Man start
             pellets.add((x, y))
 
 # Score tracking
@@ -47,10 +47,12 @@ pacman_start = (1, 1)
 pacman = PacmanAI(start_pos=pacman_start, maze=maze)
 
 # ---------- Ghost obstacles ----------
+# Ghost name and last known position
 ghost_info = {"Inky": (23, 1), "Blinky": (1, 23), "Pinky": (23, 23), "Clyde": (12,12)}
-ghosts = [] 
-for key in ghost_info:
-    ghosts.append(Ghost(key, ghost_info[key], maze))
+ghosts = [RandomGhost("Inky", ghost_info["Inky"], maze), 
+          ChaseGhost("Blinky", ghost_info["Blinky"], maze), 
+          RandomGhost("Pinky", ghost_info["Pinky"], maze),
+          ChaseGhost("Clyde", ghost_info["Clyde"], maze)]
 
 # ---------- Helper Functions ----------
 def nearest_pellet(pos, pellets_set):
@@ -145,6 +147,19 @@ while running:
     if current_time - last_move_time > MOVE_DELAY:
         last_move_time = current_time
 
+        #Move Ghosts one step
+        for ghost in ghosts:
+            action = ghost.choose_best_action(pacman.pos)
+            #If the ghost has moved, update the maze
+            if action == GhostActions.MOVE:
+                grid.update(ghost_info[ghost.name], ghost.pos)
+
+            #Update ghost info
+            ghost_info[ghost.name] = ghost.pos
+
+            # if ghost.get_position() == pacman.pos:
+            #    print("Ghost caught Pac-Man!")
+
         # Check if Pac-Man reached a pellet
         if pacman.pos in pellets:
             pellets.remove(pacman.pos)
@@ -164,20 +179,12 @@ while running:
             if target:
                 pacman.set_target(target)
 
-        #Move Ghosts one step
-        for ghost in ghosts:
-            ghost.move_to_pacman(pacman.pos)
-            #Update ghost info
-            ghost_info[ghost.name] = ghost.pos
-
-            #if ghost.get_position() == pacman.pos:
-            #    print("Ghost caught Pac-Man!")
-    
     # Draw everything
     draw()
     clock.tick(60)  # 60 FPS
 
 # Cleanup
+
 print(f"\nGame Over! Final Score: {score}")
 print(f"Pellets eaten: {pellets_eaten}/{total_pellets}")
 pygame.quit()
