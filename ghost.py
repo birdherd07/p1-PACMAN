@@ -2,129 +2,173 @@ import pygame
 import random
 import heapq
 from enum import Enum
-from typing import Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict
+
+class GhostAction(Enum):
+    MOVE = 0
+    STOP = 1
 
 class GhostState(Enum):
-    NORMAL = 0 # Not close to pac-man for a long time
-    SCARED = 1 # Close to pac-man for a while
+    CLEAR = 0 # Can move in at least one direction
+    BLOCKED = 1 # Surrounded on all sides
 
-class GhostActions(Enum):
-    MOVE = 0 # Move in one of the four movement directions
-    STOP = 1 # Do not move
-
-class Ghost:
-    # Define the possible actions: (dx, dy)
+class GhostAgent:
+    """ Parent class for the two ghost types. """
     MOVE_COST = 1
-    MOVES = [
+
+    # The four directions
+    DIRECTIONS = [
         (0, -1),  # Up
         (0, 1),   # Down
         (-1, 0),  # Left
         (1, 0)    # Right
     ]
 
+    State = Tuple[GhostState, str]
+    # Rule Table: Maps State (Percept) -> Action
+    RULE_TABLE: Dict[State, GhostAction]= {
+        # Condition 1: Chasing pac-man and clear to keep moving
+        (GhostState.CLEAR, "Chasing") : GhostAction.MOVE,
+        
+        # Condition 2: Chasing but blocked on all directions
+        (GhostState.BLOCKED, "Chasing") : GhostAction.STOP,
+
+        # Conditons 3 - 4 : Caught pac-man
+        (GhostState.CLEAR, "Caught") : GhostAction.STOP,
+
+        (GhostState.BLOCKED, "Caught") : GhostAction.STOP
+    }
+
     def __init__(self, name, start_pos, maze):
         """
         Initializes the Ghost.
         :param name: the name of this Ghost
         :param start_pos: Initial X and Y-coordinate on the grid.
         :param maze: the 2D maze to navigate.
-        :param flee: whether the ghost will flee from pac-man when close.
         """
         self.name = name
         self.maze = maze
         self.pos = start_pos
         self.image = pygame.image.load('assets/ghost.png')
-        self.scared = 0
+
+    def _perceive(self, pacman_pos):
+        """
+        Check the ghost's current surroundings.
+        """
+        rows, cols = len(self.maze), len(self.maze[0])
+
+        # Check if the ghost has caught pac-man 
+        if (self.get_position() == pacman_pos):
+            pacman_percept = "Caught"
+        else:
+            pacman_percept = "Chasing"
+
+        # Check neighboring spaces
+        current_x, current_y = self.get_position()
+        neighbors = []
+        valid_dirs = []
+        for dx, dy in self.DIRECTIONS:
+            neighbor_x, neighbor_y = current_x + dx, current_y + dy
+            # Bounds check
+            if 0 <= neighbor_x < cols and 0 <= neighbor_y < rows:
+                neighbors.append(self.maze[neighbor_y][neighbor_x])
+                valid_dirs.append((dx, dy))
+
+        return (neighbors, pacman_percept), valid_dirs
+        
+    def _state(self, perceive):
+        """ Return the agent's state based on the current percept """
+        neighs, percept = perceive
+        # Check if blocked in all directions
+        if all(i != 0 for i in neighs):
+            state = GhostState.BLOCKED
+        else:
+            state = GhostState.CLEAR
+        return (state, percept)
+    
+    def _rule_to_action(self, state):
+        """ Get the rule's action for the current state """
+        return self.RULE_TABLE.get(state)
             
     def get_position(self):
         """Returns the ghost's current grid coordinates."""
         return self.pos
-    
-    def _get_state(self, pacman_pos):
-        """Updates and returns the current state of the Ghost.
-            Ghost will have a higher probablility of being scared the longer it is close to pac-man.
-            Ghost will become less scared when not close to pac-man."""
-        current_pos = self.get_position()
-        for i in self.MOVES:
-            if (current_pos[0] + i[0], current_pos[1] + i[1]) == pacman_pos:
-                if self.scared < 5:
-                    self.scared += 1
-                if self.scared >= 3:
-                    return GhostState.SCARED
-                else:
-                    return GhostState.NORMAL
-        if self.scared > 0:
-            self.scared -= 1        
-        if self.scared >= 3:
-            return GhostState.SCARED
-        else:
-            return GhostState.NORMAL
-
-class RandomGhost(Ghost):
-    """
-    A Pac-Man style ghost that chooses a direction to go at random.
-    """
         
-    def choose_best_action(self, pacman_pos):
+    def manhattan_distance(self, p1, p2):
+        """Calculates the Manhattan distance heuristic (h(n))."""
+        return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
+
+class RandomGhost(GhostAgent):
+    """
+    A Pac-Man style ghost that moves in a line until it hits an obstacle, then turns in a random direction.
+    """
+
+    def __init__(self, name, start_pos, maze):
+        """
+        Initializes the Ghost.
+        Stores the ghost's last known direction.
+        """
+        super().__init__(name, start_pos, maze)
+        self.direction = self.DIRECTIONS[0]
+
+    def find_path(self, dirs):
+        # Attempt to keep moving in the same direction
         rows, cols = len(self.maze), len(self.maze[0])
         current_x, current_y = self.get_position()
+        neighbor_x, neighbor_y = current_x + self.direction[0], current_y + self.direction[1]
 
-        possible_moves = []
-        # Explore neighbors
-        for dx, dy in self.MOVES:
-            neighbor_x, neighbor_y = current_x + dx, current_y + dy
-            
-            # 1. Bounds and Wall Check
-            if not (0 <= neighbor_x < cols and 0 <= neighbor_y < rows):
-                continue  # Out of bounds
-            if self.maze[neighbor_y][neighbor_x] != 0:
-                continue  # Is a wall or another ghost
-
-            possible_moves.append((neighbor_x, neighbor_y))
-        if possible_moves:
-            self.pos = possible_moves[random.randint(0, (len(possible_moves) - 1))]
-            return GhostActions.MOVE
+        if (0 <= neighbor_x < cols) and (0 <= neighbor_y < rows) and self.maze[neighbor_y][neighbor_x] == 0:
+            self.pos = (neighbor_x, neighbor_y)
         else:
-            return GhostActions.STOP
+            # Find the directions that the ghost can move to
+            valid_dirs = []
+            for dx, dy in dirs:
+                if self.maze[current_y + dy][current_x + dx] == 0:
+                    valid_dirs.append((dx, dy))
+            # Choose a random new direction
+            if dirs:
+                self.direction = valid_dirs[random.randint(0, (len(valid_dirs) - 1))]
+                self.pos = (current_x + self.direction[0], current_y + self.direction[1])
+        
+    def pick_action(self, pacman_pos):
+        """ 
+        Pick an action based on the current percept, state and rules.
+        """
+        percept, valid_dirs = self._perceive(pacman_pos)
+        state = self._state(percept)
+        action = self._rule_to_action(state)
+        if action == GhostAction.MOVE:
+            # Try to move in the current direction, else turn in a random valid direction
+            self.find_path(valid_dirs)
 
+        return action
 
-class ChaseGhost(Ghost):
+class ChaseGhost(GhostAgent):
     """
     A Pac-Man style ghost that uses an A* pathfinding algorithm to chase or intercept Pac-Man.
-    When state is normal, chooses the shortest path.
-    When state is scared, chooses the longest path.
+    Chooses the best path based on a performance measure of path length.
     """
     
     def __init__(self, name, start_pos, maze):
         """
         Initializes the Ghost.
-        :param name: the name of this Ghost
-        :param start_pos: Initial X and Y-coordinate on the grid.
-        :param maze: the 2D maze to navigate.
-        :param intercept: whether or not the ghost will try to cut pac-man off from ahead.
+        Stores the ghost's last known path.
         """
-        self.name = name
-        self.maze = maze
-        self.pos = start_pos
-        self.image = pygame.image.load('assets/ghost.png')
+        super().__init__(name, start_pos, maze)
         self.current_path: List[Tuple[int, int]] = []
-        self.scared = 0
-
+        
     def intercept_positions(self, pacman_pos):
         """
-        Return a list of valid positions that are two spaces ahead of pac-man in each direction.
+        Return a list of valid intercept positions that are two spaces ahead of pac-man in each direction, plus pac-man's current position.
         """    
         valid_positions = []
-        for i in self.MOVES:
+        valid_positions.append(pacman_pos)
+        for i in self.DIRECTIONS:
             adjacent = (pacman_pos[0] + (i[0] * 2), pacman_pos[1] + (i[1] * 2))
             if adjacent[0] < len(self.maze) and adjacent[1] < len(self.maze) and self.maze[adjacent[1]][adjacent[0]] == 0:
                 valid_positions.append(adjacent)
         return valid_positions
     
-    def manhattan_distance(self, p1, p2):
-        """Calculates the Manhattan distance heuristic (h(n))."""
-        return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
-
     def find_path(self, start, end):
         """
         Finds the shortest path in a 2D grid maze using the A* algorithm.
@@ -164,7 +208,7 @@ class ChaseGhost(Ghost):
                 return path[:-1][::-1] # Reverse to get path from start to end
 
             # Explore neighbors
-            for dx, dy in self.MOVES:
+            for dx, dy in self.DIRECTIONS:
                 neighbor_x, neighbor_y = current_x + dx, current_y + dy
                 neighbor_node = (neighbor_x, neighbor_y)
                 
@@ -194,46 +238,45 @@ class ChaseGhost(Ghost):
 
         # Path not found
         return None
+    
+    def performance_measure(self, paths):
+        """ Score paths by length. Shortest paths to pac-man score highest. """
+        scores = []
+        longest = len(max(paths, key=len))
+        for path in paths:
+            scores.append(abs(len(path) - longest))
+        return scores
 
-    def score_actions(self, state, paths):
-        if not paths:
-            return None
-        # Choose the longest path to pac-man
-        if state == GhostState.SCARED:
-            return max(paths, key=len)
-        # Choose the shortest path
-        else: #state == NORMAL
-            return min(paths, key=len)
-
-    def choose_best_action(self, pacman_pos):
+    def pick_action(self, pacman_pos):
+        """ 
+        Pick the best scored action based on the current percept, state and rules.
         """
-        Calculates the best path to Pac-Man based on state, moves the ghost one step along it.
-        :param pacman_pos: Pac-Man's X and Y-coordinate (target).
-        """
-        # 1. Get State
-        state = self._get_state(pacman_pos)
-        current_coords = self.get_position()
-        # 2. Find possible paths: to pacman and to intercept it from each direction
-        paths = []
-        coords = self.intercept_positions(pacman_pos)
-        coords.append(pacman_pos)
-        for coord in coords:
-            paths.append(self.find_path(current_coords, coord))
-        # 3. Pick a path based on state
-        self.current_path = self.score_actions(state, paths)
-        # 2. Execute Action
-        if self.current_path:
-            # Move action: Update the ghost's position to the next grid tile. If next tile has a ghost, move to the next closest space (if available)
-            next_pos = self.current_path.pop(0)
+        percept, valid_dirs = self._perceive(pacman_pos)
+        state = self._state(percept)
+        action = self._rule_to_action(state)
 
-            while self.maze[next_pos[1]][next_pos[0]] == 2:
-                try:
-                    next_pos = self.current_path.pop(0)
-                except IndexError as e:
-                    return
-            self.pos = next_pos
-            return GhostActions.MOVE
-        else:
-            # No paths: Stop
-            return GhostActions.STOP
-            
+        if action == GhostAction.MOVE:
+            # Calculate moves
+            valid_goals = self.intercept_positions(pacman_pos)
+            position = self.get_position()
+            potential_moves = []
+            for goal in valid_goals:
+                potential_moves.append(self.find_path(position, goal))
+            # Score potential moves
+            performance_scores = self.performance_measure(potential_moves)
+            # Update path to best scored path
+            best_index = performance_scores.index(max(performance_scores))
+            self.current_path = potential_moves[best_index]
+            if self.current_path:
+                # Update the ghost's position to the next grid tile in path. If next tile has a ghost, move to the next closest space (if available)
+                next_pos = self.current_path.pop(0)
+
+                while self.maze[next_pos[1]][next_pos[0]] == 2:
+                    try:
+                        next_pos = self.current_path.pop(0)
+                    except IndexError as e:
+                        return
+                self.pos = next_pos
+
+        return action
+    

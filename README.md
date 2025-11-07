@@ -34,7 +34,7 @@ This project implements an intelligent PACMAN game where the PACMAN character ac
 - **Algorithm Used**: A* Algorithm
 - **Files**: `level.py, ghost.py`
 - **Key Features**:
-  - Pathfinding shortest path to Pac-Man
+  - Pathfinding shortest path to Pac-Man and random movement
   - 2D Maze representation
   - Custom level sprites
 
@@ -55,17 +55,17 @@ class PacmanAI:
     - set_target(): Compute path to target pellet
     - step(): Move one cell along the path
 
-class Ghost:
+class GhostAgent:
    - class GhostState(Enum): Defines the two possible ghost states
-   - class GhostActions(Enum): Defintes the two possible ghost actions
-   - class RandomGhost(Ghost): A type of Ghost that moves randomly
+   - class GhostAction(Enum): Defintes the two types of ghost actions
+   - class RandomGhost(Ghost): A type of Ghost that keeps moving in one direction until blocked, then turns randomly.
    - class ChaseGhost(Ghost): A type of Ghost that chases or intercepts Pac-man depending on state
     - __init__(): Initialize with name, starting position and maze
     - _get_state(): Update and return the current state
-    - intercept_positions(): Return valid positions that are ahead of pac-man for ChaseGhosts
+    - intercept_positions(): Return a list of valid positions to pac-man or two spaces ahead in any direction
     - find_path(): A* algorithm
-    - score_actions(): Given the state, return the best action
-    - choose_best_action(): Get the state and possible actions, then execute the best scored action or pick a random action
+    - performance_measure(): Score the available paths based on length
+    - pick_action(): Get the percept, state and rule-based action, execute the best scored action
 
 class Level:
     - __init__(): Initialize maze layout and tile sprites for display
@@ -150,6 +150,11 @@ python3 pacman.py
 - **Prompt**: "Please generate a python A* pathfinding algorithm for a 2d maze"
 - **AI Response**: Explained A* algorithm and provided implementation with driver
 - **Modification**: Removed driver, customized function parameters to fit within class
+
+#### Design of Ghost rules and actions
+- **Prompt**: "In python, what is the optimal way to design a set of rules and actions for a reflex agent?"
+- **AI Response**: Provided vacuum cleaner example, using a dictionary as a rule table with a tuple as key
+- **Modification**: Customized dictionary rules to fit the Ghost class
 
 
 ### Validation Process

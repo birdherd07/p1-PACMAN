@@ -1,7 +1,7 @@
 import pygame
 from pacman_ai import PacmanAI
 from level import Level
-from ghost import RandomGhost, ChaseGhost, GhostActions
+from ghost import RandomGhost, ChaseGhost, GhostAction
 import sys
 
 # Initialize Pygame
@@ -50,8 +50,8 @@ pacman = PacmanAI(start_pos=pacman_start, maze=maze)
 # Ghost name and last known position
 ghost_info = {"Inky": (23, 1), "Blinky": (1, 23), "Pinky": (23, 23), "Clyde": (12,12)}
 ghosts = [RandomGhost("Inky", ghost_info["Inky"], maze), 
-          ChaseGhost("Blinky", ghost_info["Blinky"], maze), 
-          RandomGhost("Pinky", ghost_info["Pinky"], maze),
+          RandomGhost("Blinky", ghost_info["Blinky"], maze), 
+          ChaseGhost("Pinky", ghost_info["Pinky"], maze),
           ChaseGhost("Clyde", ghost_info["Clyde"], maze)]
 
 # ---------- Helper Functions ----------
@@ -149,16 +149,13 @@ while running:
 
         #Move Ghosts one step
         for ghost in ghosts:
-            action = ghost.choose_best_action(pacman.pos)
+            action = ghost.pick_action(pacman.pos)
             #If the ghost has moved, update the maze
-            if action == GhostActions.MOVE:
+            if action != GhostAction.STOP:
                 grid.update(ghost_info[ghost.name], ghost.pos)
 
             #Update ghost info
             ghost_info[ghost.name] = ghost.pos
-
-            # if ghost.get_position() == pacman.pos:
-            #    print("Ghost caught Pac-Man!")
 
         # Check if Pac-Man reached a pellet
         if pacman.pos in pellets:
