@@ -1,7 +1,8 @@
 import pygame
 from pacman_ai import PacmanAI
-from level import Level
+frareom level import Level
 from ghost import RandomGhost, ChaseGhost, GhostAction
+from score_tracker import ScoreTracker
 import sys
 
 # Initialize Pygame
@@ -38,9 +39,7 @@ for y in range(GRID_H):
             pellets.add((x, y))
 
 # Score tracking
-score = 0
-pellets_eaten = 0
-total_pellets = len(pellets)
+score_tracker = ScoreTracker(total_pellets=len(pellets))
 
 # ---------- Pac-Man AI Agent ----------
 pacman_start = (1, 1)
@@ -96,20 +95,8 @@ def draw():
     cx, cy = grid_to_pixel(pacman.pos)
     pygame.draw.circle(window, (255, 255, 0), (cx, cy), CELL//2 - 2)
     
-    # Draw score
-    font = pygame.font.Font(None, 36)
-    score_text = font.render(f"Score: {score}", True, (255, 255, 255))
-    window.blit(score_text, (10, 10))
-    
-    # Draw pellets remaining
-    pellets_text = font.render(f"Pellets: {len(pellets)}/{total_pellets}", True, (255, 255, 255))
-    window.blit(pellets_text, (WIDTH - 200, 10))
-    
-    # Draw win message if all pellets eaten
-    if len(pellets) == 0:
-        win_text = font.render("YOU WIN!", True, (0, 255, 0))
-        text_rect = win_text.get_rect(center=(WIDTH//2, HEIGHT//2))
-        window.blit(win_text, text_rect)
+    # Draw score and stats
+    score_tracker.draw(window, len(pellets), WIDTH, HEIGHT)
     
     pygame.display.flip()
 
@@ -124,7 +111,7 @@ running = True
 MOVE_DELAY = 200  # Milliseconds between moves
 last_move_time = pygame.time.get_ticks()
 
-print(f"Game started! Total pellets: {total_pellets}")
+print(f"Game started! Total pellets: {score_tracker.get_total_pellets()}")
 print("Pac-Man will automatically navigate using BFS algorithm")
 print("Press ESC to quit")
 
@@ -160,9 +147,8 @@ while running:
         # Check if Pac-Man reached a pellet
         if pacman.pos in pellets:
             pellets.remove(pacman.pos)
-            score += 10
-            pellets_eaten += 1
-            print(f"Pellet eaten at {pacman.pos}! Score: {score}, Remaining: {len(pellets)}")
+            score, pellets_eaten, remaining = score_tracker.eat_pellet(pacman.pos)
+            print(f"Pellet eaten at {pacman.pos}! Score: {score}, Remaining: {remaining}")
             
             # Find new target if pellets remain
             if pellets:
@@ -184,5 +170,6 @@ while running:
 
 print(f"\nGame Over! Final Score: {score}")
 print(f"Pellets eaten: {pellets_eaten}/{total_pellets}")
+score_tracker.print_stats()
 pygame.quit()
 sys.exit()
