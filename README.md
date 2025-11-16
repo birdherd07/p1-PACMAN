@@ -37,6 +37,42 @@ class PacmanAI:
     - step(): Move one cell along the path
 ```
 
+## Yogitha's Contribution: Score Tracking System
+
+### Implementation Details
+- **File**: `score_tracker.py`
+- **Key Features**:
+  - Real-time score calculation and tracking
+  - Pellet consumption monitoring
+  - Visual score display on game screen
+  - Win condition detection
+  - Game statistics reporting
+
+### How the Score Tracker Works
+1. **Initialization**: Tracks total pellets and configurable pellet value (default: 10 points)
+2. **Pellet Collection**: Updates score and pellet count when Pac-Man eats a pellet
+3. **Display**: Renders score and remaining pellets on screen in real-time
+4. **Win Detection**: Displays "YOU WIN!" message when all pellets are collected
+5. **Statistics**: Provides final game statistics upon completion
+
+### Code Structure
+```python
+class ScoreTracker:
+    - __init__(): Initialize with total pellets and pellet value
+    - eat_pellet(): Update score when pellet is eaten
+    - get_score(): Retrieve current score
+    - get_pellets_eaten(): Get count of eaten pellets
+    - draw(): Render score and pellet info on screen
+    - print_stats(): Display final game statistics
+```
+
+### Features
+- **Configurable Scoring**: Pellet value can be customized (default: 10 points per pellet)
+- **Real-time Updates**: Score updates immediately when pellets are collected
+- **Visual Feedback**: Score and pellet count displayed prominently on screen
+- **Progress Tracking**: Shows remaining pellets (e.g., "Pellets: 15/20")
+- **Win Detection**: Automatically detects and displays win condition
+
 ## Running the Game
 
 ### Prerequisites
@@ -137,6 +173,7 @@ python3 pacman.py
 p1-PACMAN/
 ├── pacman.py        # Main game file
 ├── pacman_ai.py     # BFS pathfinding logic (Liu's work)
+├── score_tracker.py # Score tracking system (Yogitha's work)
 ├── README.md        # This file
 ├── requirements.txt # Python dependencies
 └── .venv/          # Virtual environment
