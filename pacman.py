@@ -1,6 +1,6 @@
 import pygame
 from pacman_ai import PacmanAI
-frareom level import Level
+from level import Level
 from ghost import RandomGhost, ChaseGhost, GhostAction
 from score_tracker import ScoreTracker
 import sys
