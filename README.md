@@ -2,7 +2,7 @@
 
 ## Team Members
 - **Liu** - Pac-Man AI Pathfinding (BFS Algorithm)
-- **Rachel** - Maze Design and Game Framework
+- **Rachel** - Maze Design and Ghosts
 - **Yogitha** - Score Tracking System
 
 ## Project Overview
@@ -28,6 +28,25 @@ This project implements an intelligent PACMAN game where the PACMAN character ac
    - Returns the shortest path when goal is found
 4. **Movement**: Pac-Man follows the computed path step-by-step
 
+## Rachel: Maze and Ghosts
+
+### Implementation Details
+- **Algorithm Used**: A* Algorithm
+- **Files**: `level.py, ghost.py`
+- **Key Features**:
+  - Pathfinding shortest path to Pac-Man and random movement
+  - 2D Maze representation
+  - Custom level sprites
+
+### How the A* Algorithm Works
+1. **Start**: Ghost's current position
+2. **Goal**: Pac-Man's current position
+3. **Process**:
+   - Uses a priority queue to explore cells with lowest cost
+   - manhattan_distance: The heuristic function, h(n). It calculates the distance by only allowing movement along the grid axes (horizontal and vertical).
+   - g_costs: A dictionary storing the shortest actual distance g(n) from the start node to every other reachable node.
+   - Loop Logic: The core loop continuously extracts the lowest-f(n) node, checks if it's the goal, and then explores its neighbors. It updates a neighbor's path only if a shorter g(n) is discovered.
+
 ### Code Structure
 ```python
 class PacmanAI:
@@ -35,6 +54,21 @@ class PacmanAI:
     - bfs(): Core search algorithm
     - set_target(): Compute path to target pellet
     - step(): Move one cell along the path
+
+class GhostAgent:
+   - class GhostState(Enum): Defines the two possible ghost states
+   - class GhostAction(Enum): Defintes the two types of ghost actions
+   - class RandomGhost(Ghost): A type of Ghost that keeps moving in one direction until blocked, then turns randomly.
+   - class ChaseGhost(Ghost): A type of Ghost that chases or intercepts Pac-man depending on state
+    - __init__(): Initialize with name, starting position and maze
+    - _get_state(): Update and return the current state
+    - intercept_positions(): Return a list of valid positions to pac-man or two spaces ahead in any direction
+    - find_path(): A* algorithm
+    - performance_measure(): Score the available paths based on length
+    - pick_action(): Get the percept, state and rule-based action, execute the best scored action
+
+class Level:
+    - __init__(): Initialize maze layout and tile sprites for display
 ```
 
 ## Yogitha's Contribution: Score Tracking System
@@ -124,6 +158,7 @@ python3 pacman.py
 ### Tools Used
 - **ChatGPT**: Initial project setup, environment configuration
 - **Claude**: Code refinement, BFS implementation, documentation
+- **Gemini**: Maze generation, A* implementation
 
 ### Specific AI Assistance
 
@@ -142,6 +177,22 @@ python3 pacman.py
 - **AI Response**: Explained SDL2 dependency issue on macOS
 - **Modification**: Installed SDL2 via Homebrew before pygame
 
+#### Maze generation
+- **Prompt**: "Generate a 25 x 25 pac-man style maze, where a 1 represents a wall and a 0 represents an empty space"
+- **AI Response**: Generated maze
+- **Modification**: Fixed boundary of maze in 2 rows
+
+#### A* algorithm
+- **Prompt**: "Please generate a python A* pathfinding algorithm for a 2d maze"
+- **AI Response**: Explained A* algorithm and provided implementation with driver
+- **Modification**: Removed driver, customized function parameters to fit within class
+
+#### Design of Ghost rules and actions
+- **Prompt**: "In python, what is the optimal way to design a set of rules and actions for a reflex agent?"
+- **AI Response**: Provided vacuum cleaner example, using a dictionary as a rule table with a tuple as key
+- **Modification**: Customized dictionary rules to fit the Ghost class
+
+
 ### Validation Process
 1. Tested each AI-generated function independently
 2. Verified pathfinding correctness with print statements
@@ -156,10 +207,10 @@ python3 pacman.py
 
 ## Future Improvements
 - [ ] Implement A* algorithm for comparison
-- [ ] Add ghost AI (random walk or chase behavior)
 - [ ] Optimize path recalculation
 - [ ] Add difficulty levels
 - [ ] Implement power-ups
+- [ ] Make unique ghost behavior
 
 ## Testing Instructions
 1. Run `python3 pacman.py`
