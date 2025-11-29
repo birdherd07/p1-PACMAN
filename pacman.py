@@ -1,7 +1,8 @@
 import pygame
 from pacman_ai import PacmanAI
-frareom level import Level
-from ghost import RandomGhost, ChaseGhost, GhostAction
+from level import Level
+from ghost import RandomGhost, ChaseGhost
+from game_agent import AgentAction, GameState
 from score_tracker import ScoreTracker
 import sys
 
@@ -23,8 +24,8 @@ except Exception:
 clock = pygame.time.Clock()
 
 # ---------- Grid / Maze Configuration ----------
-CELL = 20  # Each cell is 25x25 pixels
-GRID_W, GRID_H = WIDTH // CELL, HEIGHT // CELL  # 25x25 grid
+CELL = 20  # Each cell is 20x20 pixels
+GRID_W, GRID_H = WIDTH // CELL, HEIGHT // CELL  # 20x20 grid
 
 # Create maze: 0=open path, 1=wall
 grid = Level()
@@ -54,6 +55,12 @@ ghosts = [RandomGhost("Inky", ghost_info["Inky"], maze),
           ChaseGhost("Clyde", ghost_info["Clyde"], maze)]
 
 # ---------- Helper Functions ----------
+def game_state():
+    if not pellets:
+        return GameState.GOAL
+    else:
+        return GameState.ACTING
+
 def nearest_pellet(pos, pellets_set):
     """Find nearest pellet using Manhattan distance"""
     if not pellets_set:
@@ -134,33 +141,46 @@ while running:
     if current_time - last_move_time > MOVE_DELAY:
         last_move_time = current_time
 
-        #Move Ghosts one step
-        for ghost in ghosts:
-            action = ghost.pick_action(pacman.pos)
-            #If the ghost has moved, update the maze
-            if action != GhostAction.STOP:
-                grid.update(ghost_info[ghost.name], ghost.pos)
-
-            #Update ghost info
-            ghost_info[ghost.name] = ghost.pos
-
         # Check if Pac-Man reached a pellet
         if pacman.pos in pellets:
             pellets.remove(pacman.pos)
             score, pellets_eaten, remaining = score_tracker.eat_pellet(pacman.pos)
             print(f"Pellet eaten at {pacman.pos}! Score: {score}, Remaining: {remaining}")
             
+            #comment out this block
             # Find new target if pellets remain
             if pellets:
                 target = nearest_pellet(pacman.pos, pellets)
                 pacman.set_target(target)
+
+        current_state = game_state()
         
         # Move Pac-Man one step
-        if not pacman.step() and pellets:
+        if not pacman.step() and pellets: # if pellets:
             # If no current path and pellets exist, find new target
             target = nearest_pellet(pacman.pos, pellets)
             if target:
                 pacman.set_target(target)
+        pacman.step()
+
+        #Move Ghosts one step
+        for ghost in ghosts:
+            action = ghost.pick_action(pacman.pos, current_state)
+            #If the ghost has moved, update the maze
+            if action != AgentAction.STOP:
+                grid.update(ghost_info[ghost.name], ghost.pos)
+
+            #Update ghost info
+            ghost_info[ghost.name] = ghost.pos
+
+            # Respawn pacman at start if caught
+            if ghost.get_position() == pacman.pos:
+                pacman.set_position(pacman_start)
+                # Reset ghosts at start
+                for ghost in ghosts:
+                    ghost.reset_position()
+                # Slow ghosts
+                break
 
     # Draw everything
     draw()
@@ -169,7 +189,6 @@ while running:
 # Cleanup
 
 print(f"\nGame Over! Final Score: {score}")
-print(f"Pellets eaten: {pellets_eaten}/{total_pellets}")
 score_tracker.print_stats()
 pygame.quit()
 sys.exit()

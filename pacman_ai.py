@@ -74,6 +74,10 @@ class PacmanAI:
     def get_position(self):
         """Get current position"""
         return self.pos
+    
+    def set_position(self, new_pos):
+        """Set position to new_pos"""
+        self.pos = new_pos
 
     def has_path(self):
         """Check if Pac-Man has a path to follow"""
