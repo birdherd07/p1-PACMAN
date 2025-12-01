@@ -14,7 +14,7 @@ class AgentState(Enum):
     Possible states based on the environment.
     """
     CLEAR = 0 # No obstructions
-    NEAR_AGENT = 1 # Next to at least one other agent
+    NEAR_AGENTS = 1 # Next to at least 2 other agents
     BLOCKED = 2 # Blocked on all sides
 
 class GameState(Enum):
@@ -44,7 +44,7 @@ class GameAgent:
         (AgentState.CLEAR, GameState.ACTING) : AgentAction.MOVE,
 
         # Rule 2: Next to agent, not at goal -> Avoid agent
-        (AgentState.NEAR_AGENT, GameState.ACTING) : AgentAction.AVOID,
+        (AgentState.NEAR_AGENTS, GameState.ACTING) : AgentAction.AVOID,
         
         # Rule 3: Blocked on all sides, not at goal -> Do not move
         (AgentState.BLOCKED, GameState.ACTING) : AgentAction.STOP,
@@ -53,7 +53,7 @@ class GameAgent:
         (AgentState.CLEAR,  GameState.GOAL) : AgentAction.STOP,
 
         # Rule 5: Next to agent, at goal -> Do not move
-        (AgentState.NEAR_AGENT, GameState.GOAL) : AgentAction.STOP,
+        (AgentState.NEAR_AGENTS, GameState.GOAL) : AgentAction.STOP,
 
         # Rule 6: Blocked on all sides, at goal -> Do not move
         (AgentState.BLOCKED, GameState.GOAL) : AgentAction.STOP
@@ -68,36 +68,72 @@ class GameAgent:
         self.maze = maze
         self.start_pos = start_pos
         self.pos = start_pos
+    
+    def _neighbors_list(self):
+        """Get all valid neighboring cells within bounds"""
+        rows, cols = len(self.maze), len(self.maze[0])
+        x, y = self.get_position()
 
-    def _perceive(self):
+        # List of adjacent spaces the agent can move to
+        neighs = []
+        for dx, dy in self.DIRECTIONS:
+            nx, ny = x + dx, y + dy
+            # Bounds check
+            if 0 <= nx < cols and 0 <= ny < rows and self.maze[ny][nx] == 0:
+                neighs.append((nx, ny))
+        return neighs  
+    
+    def _adjacent_agent(self, pos):
         """
-        Check the Agent's current surroundings and return a list of valid neighbors and directions.
+        Return whether a cell is next to an agent.
+        :param pos: The cell to check.
         """
         rows, cols = len(self.maze), len(self.maze[0])
+        x, y = pos
 
-        # Check neighboring spaces
-        current_x, current_y = self.get_position()
-        neighbors = []
-        valid_dirs = []
         for dx, dy in self.DIRECTIONS:
-            neighbor_x, neighbor_y = current_x + dx, current_y + dy
+            nx, ny = x + dx, y + dy
             # Bounds check
-            if 0 <= neighbor_x < cols and 0 <= neighbor_y < rows:
-                neighbors.append(self.maze[neighbor_y][neighbor_x])
-                valid_dirs.append((dx, dy))
+            if 0 <= nx < cols and 0 <= ny < rows and self.maze[ny][nx] == 2:
+                return True
+        return False 
+    
+    def manhattan_distance(self, p1, p2):
+        """Calculates the Manhattan distance heuristic (h(n))."""
+        return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
 
-        return neighbors, valid_dirs
+    def _perceive(self):
+        """Check the Agent's current surroundings within 2 spaces and return a list of directions where agents are detected."""
+        rows, cols = len(self.maze), len(self.maze[0])
+        x, y = self.get_position()
+
+        # List of directions of agents within 2 spaces the agent perceives
+        percept = []
+        for r_offset in range(-2, 3):  # From -2 to 2 (inclusive)
+            for c_offset in range(-2, 3):  # From -2 to 2 (inclusive)
+                # Skip the central cell itself
+                if r_offset == 0 and c_offset == 0:
+                    continue
+
+                ny = y + r_offset
+                nx = x + c_offset
+
+                # Check if the neighbor coordinates are within the grid boundaries
+                if 0 <= ny < rows and 0 <= nx < cols and self.maze[ny][nx] == 2:
+                    percept.append(min(self.DIRECTIONS, key=lambda d: self.manhattan_distance((nx, ny), d)))
+
+        return percept
         
-    def _state(self, neighs):
+    def _state(self, percept, neighs):
         """ 
         Returns the agent's state based on the current percept 
-        :param neighs: the perceived neighboring spaces of the agent
+        :param percept: the perceived neighboring spaces of the agent
         """
-        # Blocked in all directions by walls or other agents
-        if all(i != 0 for i in neighs):
+        # Blocked in all adjacent spaces by walls or other agents
+        if len(neighs) == 0:
             state = AgentState.BLOCKED
-        elif 2 in neighs: # Next to at least one agent
-            state = AgentState.NEAR_AGENT
+        elif len(percept) > 1: # At least one agent is within 2 spaces
+            state = AgentState.NEAR_AGENTS
         else:
             state = AgentState.CLEAR
         return state
@@ -117,6 +153,16 @@ class GameAgent:
         """Sets this agent's position to its starting position."""
         self.pos = self.start_pos
     
+    def pick_action(self, game_state):
+        """ 
+        Pick the best action based on the current percept, state and rules.
+        """
+        percept = self._perceive()
+        agent_state = self._state(percept, self._neighbors_list())
+        action = self._rule_to_action((agent_state, game_state))
+
+        return action, percept
+    
     def _performance_measure(self, paths):
         """ 
         Return a list of scores, measured for maximizing efficiency (shorter length). 
@@ -124,19 +170,6 @@ class GameAgent:
         """
         scored_points = []
         for path in paths:
-            scored_points.append(500-len(path))
+            if path:
+                scored_points.append(500-len(path))
         return scored_points
-    
-    def manhattan_distance(self, p1, p2):
-        """Calculates the Manhattan distance heuristic (h(n))."""
-        return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
-    
-    def pick_action(self, game_state):
-        """ 
-        Pick the best action based on the current percept, state and rules.
-        """
-        neighbors, valid_dirs = self._perceive()
-        agent_state = self._state(neighbors)
-        action = self._rule_to_action((agent_state, game_state))
-
-        return action, valid_dirs

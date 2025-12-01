@@ -1,4 +1,5 @@
 import pygame
+import copy
 from pacman_ai import PacmanAI
 from level import Level
 from ghost import RandomGhost, ChaseGhost
@@ -51,21 +52,30 @@ pacman = PacmanAI(start_pos=pacman_start, maze=maze)
 ghost_info = {"Inky": (23, 1), "Blinky": (1, 23), "Pinky": (23, 23), "Clyde": (12,12)}
 ghosts = [RandomGhost("Inky", ghost_info["Inky"], maze), 
           RandomGhost("Blinky", ghost_info["Blinky"], maze), 
-          ChaseGhost("Pinky", ghost_info["Pinky"], maze),
-          ChaseGhost("Clyde", ghost_info["Clyde"], maze)]
+          RandomGhost("Pinky", ghost_info["Pinky"], maze),
+          RandomGhost("Clyde", ghost_info["Clyde"], maze)]
 
 # ---------- Helper Functions ----------
 def game_state():
+    """Returns whether the game is finished (Agent at goal) or still playing"""
     if not pellets:
         return GameState.GOAL
     else:
         return GameState.ACTING
-
-def nearest_pellet(pos, pellets_set):
-    """Find nearest pellet using Manhattan distance"""
+    
+def nearest_pellets(pos, pellets_set):
+    """Find the nearest 3 or fewer pellets using Manhattan distance"""
     if not pellets_set:
         return None
-    return min(pellets_set, key=lambda p: abs(p[0]-pos[0]) + abs(p[1]-pos[1]))
+    pellets_copy = copy.deepcopy(pellets_set)
+    nearest = []
+
+    for _ in range(3):
+        if pellets_copy:
+            next_nearest = min(pellets_copy, key=lambda p: abs(p[0]-pos[0]) + abs(p[1]-pos[1]))
+            nearest.append(next_nearest)
+            pellets_copy.remove(next_nearest)
+    return nearest
 
 def grid_to_pixel(cell):
     """Convert grid coordinates to pixel coordinates (center of cell)"""
@@ -108,11 +118,8 @@ def draw():
     pygame.display.flip()
 
 # ---------- Main Game Loop ----------
-# Find initial target
-if pellets:
-    target = nearest_pellet(pacman.pos, pellets)
-    pacman.set_target(target)
-    print(f"Initial target: {target}")
+# Initial game state
+current_state = GameState.ACTING
 
 running = True
 MOVE_DELAY = 200  # Milliseconds between moves
@@ -140,32 +147,25 @@ while running:
     # Move Pac-Man and ghosts at intervals
     if current_time - last_move_time > MOVE_DELAY:
         last_move_time = current_time
+            
+        # Find pac-man's nearest target if pellets remain
+        if current_state == GameState.ACTING:
+            targets = nearest_pellets(pacman.pos, pellets)
+            #pacman.set_target(target)
+            pacman.step(current_state, targets)
 
         # Check if Pac-Man reached a pellet
         if pacman.pos in pellets:
             pellets.remove(pacman.pos)
             score, pellets_eaten, remaining = score_tracker.eat_pellet(pacman.pos)
             print(f"Pellet eaten at {pacman.pos}! Score: {score}, Remaining: {remaining}")
-            
-            #comment out this block
-            # Find new target if pellets remain
-            if pellets:
-                target = nearest_pellet(pacman.pos, pellets)
-                pacman.set_target(target)
 
+        # Get the game state based on whether pellets remain
         current_state = game_state()
-        
-        # Move Pac-Man one step
-        if not pacman.step() and pellets: # if pellets:
-            # If no current path and pellets exist, find new target
-            target = nearest_pellet(pacman.pos, pellets)
-            if target:
-                pacman.set_target(target)
-        pacman.step()
 
         #Move Ghosts one step
         for ghost in ghosts:
-            action = ghost.pick_action(pacman.pos, current_state)
+            action = ghost.step(pacman.pos, current_state)
             #If the ghost has moved, update the maze
             if action != AgentAction.STOP:
                 grid.update(ghost_info[ghost.name], ghost.pos)
@@ -175,11 +175,10 @@ while running:
 
             # Respawn pacman at start if caught
             if ghost.get_position() == pacman.pos:
-                pacman.set_position(pacman_start)
+                pacman.reset_position()
                 # Reset ghosts at start
                 for ghost in ghosts:
                     ghost.reset_position()
-                # Slow ghosts
                 break
 
     # Draw everything

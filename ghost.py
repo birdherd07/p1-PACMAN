@@ -19,7 +19,7 @@ class RandomGhost(GameAgent):
         self.direction = self.DIRECTIONS[3]
         self.image = pygame.image.load('assets/randghost.png')
 
-    def move(self, dirs):
+    def move(self):
         """
         Attempt to keep moving in the same direction. If obstacles, turn in a random direction.
         """
@@ -30,27 +30,30 @@ class RandomGhost(GameAgent):
         if (0 <= neighbor_x < cols) and (0 <= neighbor_y < rows) and self.maze[neighbor_y][neighbor_x] == 0:
             self.pos = (neighbor_x, neighbor_y)
         else:
-            # Find the directions that the ghost can move to
-            valid_dirs = []
-            for dx, dy in dirs:
-                if self.maze[current_y + dy][current_x + dx] == 0:
-                    valid_dirs.append((dx, dy))
             # Choose a random new direction
-            if dirs:
-                self.direction = valid_dirs[random.randint(0, (len(valid_dirs) - 1))]
-                self.pos = (current_x + self.direction[0], current_y + self.direction[1])
+            valid_dirs = self._neighbors_list()
+            if valid_dirs:
+                new_pos = valid_dirs[random.randint(0, (len(valid_dirs) - 1))]
+                self.direction = (new_pos[0] - self.pos[0], new_pos[1] - self.pos[1])
+                self.pos = new_pos
         
-    def pick_action(self, pacman_pos, game_state):
+    def step(self, pacman_pos, game_state):
         """ 
         Pick an action based on the current percept, state and rules.
         """
-        action, valid_dirs = super().pick_action(game_state)
+        action, percept = self.pick_action(game_state)
 
         if action == AgentAction.MOVE or action == AgentAction.AVOID:
             # Walls and other agents are treated the same by this simple agent
-            self.move(valid_dirs)
+            self.move()
 
         return action
+    
+    def reset_position(self):
+        super().reset_position()
+        # Reset old direction
+        self.direction = self.DIRECTIONS[3]
+
 
 class ChaseGhost(GameAgent):
     """
@@ -149,11 +152,11 @@ class ChaseGhost(GameAgent):
         # Path not found
         return None
 
-    def pick_action(self, pacman_pos, game_state):
+    def step(self, pacman_pos, game_state):
         """ 
         Pick the best scored action based on the current percept, state and rules.
         """
-        action, valid_dirs = super().pick_action(game_state)
+        action, percept = self.pick_action(game_state)
         position = self.get_position()
 
         if action == AgentAction.MOVE or action == AgentAction.AVOID:
@@ -175,10 +178,7 @@ class ChaseGhost(GameAgent):
                 
                 if self.maze[next_pos[1]][next_pos[0]] == 2:
                     # Move in a valid direction not occupied by other ghost (if available)
-                    dirs = []
-                    for dx, dy in valid_dirs:
-                        if self.maze[position[1] + dy][position[0] + dx] == 0:
-                            dirs.append((position[0] + dx, position[1] + dy))
+                    dirs = self._neighbors_list()
                     if dirs:
                         next_pos = dirs[random.randint(0, (len(dirs) - 1))]
 
