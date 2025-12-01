@@ -14,7 +14,7 @@ class AgentState(Enum):
     Possible states based on the environment.
     """
     CLEAR = 0 # No obstructions
-    NEAR_AGENTS = 1 # Next to at least 2 other agents
+    NEAR_AGENT = 1 # Near to at least 1 other agent
     BLOCKED = 2 # Blocked on all sides
 
 class GameState(Enum):
@@ -43,8 +43,8 @@ class GameAgent:
         # Rule 1: Clear path, not at goal -> Move towards goal
         (AgentState.CLEAR, GameState.ACTING) : AgentAction.MOVE,
 
-        # Rule 2: Next to agent, not at goal -> Avoid agent
-        (AgentState.NEAR_AGENTS, GameState.ACTING) : AgentAction.AVOID,
+        # Rule 2: Near agent, not at goal -> Avoid agent
+        (AgentState.NEAR_AGENT, GameState.ACTING) : AgentAction.AVOID,
         
         # Rule 3: Blocked on all sides, not at goal -> Do not move
         (AgentState.BLOCKED, GameState.ACTING) : AgentAction.STOP,
@@ -52,8 +52,8 @@ class GameAgent:
         # Rule 4: Can move, at goal -> Do not move
         (AgentState.CLEAR,  GameState.GOAL) : AgentAction.STOP,
 
-        # Rule 5: Next to agent, at goal -> Do not move
-        (AgentState.NEAR_AGENTS, GameState.GOAL) : AgentAction.STOP,
+        # Rule 5: Near agent, at goal -> Do not move
+        (AgentState.NEAR_AGENT, GameState.GOAL) : AgentAction.STOP,
 
         # Rule 6: Blocked on all sides, at goal -> Do not move
         (AgentState.BLOCKED, GameState.GOAL) : AgentAction.STOP
@@ -103,12 +103,12 @@ class GameAgent:
         return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
 
     def _perceive(self):
-        """Check the Agent's current surroundings within 2 spaces and return a list of directions where agents are detected."""
+        """Check the Agent's current surroundings within 2 spaces and return the number of other agents detected."""
         rows, cols = len(self.maze), len(self.maze[0])
         x, y = self.get_position()
+        num_agents = 0
 
-        # List of directions of agents within 2 spaces the agent perceives
-        percept = []
+        # Check all spaces within 2 spaces
         for r_offset in range(-2, 3):  # From -2 to 2 (inclusive)
             for c_offset in range(-2, 3):  # From -2 to 2 (inclusive)
                 # Skip the central cell itself
@@ -120,11 +120,10 @@ class GameAgent:
 
                 # Check if the neighbor coordinates are within the grid boundaries
                 if 0 <= ny < rows and 0 <= nx < cols and self.maze[ny][nx] == 2:
-                    percept.append(min(self.DIRECTIONS, key=lambda d: self.manhattan_distance((nx, ny), d)))
-
-        return percept
+                    num_agents += 1
+        return num_agents
         
-    def _state(self, percept, neighs):
+    def _state(self, agents, neighs):
         """ 
         Returns the agent's state based on the current percept 
         :param percept: the perceived neighboring spaces of the agent
@@ -132,8 +131,8 @@ class GameAgent:
         # Blocked in all adjacent spaces by walls or other agents
         if len(neighs) == 0:
             state = AgentState.BLOCKED
-        elif len(percept) > 1: # At least one agent is within 2 spaces
-            state = AgentState.NEAR_AGENTS
+        elif agents > 0: # At least one agent is within 2 spaces
+            state = AgentState.NEAR_AGENT
         else:
             state = AgentState.CLEAR
         return state
@@ -161,15 +160,4 @@ class GameAgent:
         agent_state = self._state(percept, self._neighbors_list())
         action = self._rule_to_action((agent_state, game_state))
 
-        return action, percept
-    
-    def _performance_measure(self, paths):
-        """ 
-        Return a list of scores, measured for maximizing efficiency (shorter length). 
-        :param paths: List of possible paths the agent can take.
-        """
-        scored_points = []
-        for path in paths:
-            if path:
-                scored_points.append(500-len(path))
-        return scored_points
+        return action

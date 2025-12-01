@@ -2,7 +2,7 @@ import pygame
 import copy
 from pacman_ai import PacmanAI
 from level import Level
-from ghost import RandomGhost, ChaseGhost
+from ghost import Ghost
 from game_agent import AgentAction, GameState
 from score_tracker import ScoreTracker
 import sys
@@ -50,10 +50,10 @@ pacman = PacmanAI(start_pos=pacman_start, maze=maze)
 # ---------- Ghost obstacles ----------
 # Ghost name and last known position
 ghost_info = {"Inky": (23, 1), "Blinky": (1, 23), "Pinky": (23, 23), "Clyde": (12,12)}
-ghosts = [RandomGhost("Inky", ghost_info["Inky"], maze), 
-          RandomGhost("Blinky", ghost_info["Blinky"], maze), 
-          RandomGhost("Pinky", ghost_info["Pinky"], maze),
-          RandomGhost("Clyde", ghost_info["Clyde"], maze)]
+ghosts = [Ghost("Inky", ghost_info["Inky"], maze), 
+          Ghost("Blinky", ghost_info["Blinky"], maze), 
+          Ghost("Pinky", ghost_info["Pinky"], maze),
+          Ghost("Clyde", ghost_info["Clyde"], maze)]
 
 # ---------- Helper Functions ----------
 def game_state():
@@ -95,11 +95,6 @@ def draw():
     for (px, py) in pellets:
         cx, cy = grid_to_pixel((px, py))
         pygame.draw.circle(window, (255, 255, 255), (cx, cy), CELL//8)
-
-    # Draw Ghosts
-    for ghost in ghosts:
-        gx, gy = ghost.get_position()
-        window.blit(ghost.image, (gx * CELL, gy * CELL))
     
     # Draw Pac-Man's path (optional visualization)
     if pacman.path:
@@ -111,6 +106,11 @@ def draw():
     # Draw Pac-Man
     cx, cy = grid_to_pixel(pacman.pos)
     pygame.draw.circle(window, (255, 255, 0), (cx, cy), CELL//2 - 2)
+
+    # Draw Ghosts
+    for ghost in ghosts:
+        gx, gy = ghost.get_position()
+        window.blit(ghost.image, (gx * CELL, gy * CELL))
     
     # Draw score and stats
     score_tracker.draw(window, len(pellets), WIDTH, HEIGHT)
@@ -165,7 +165,7 @@ while running:
 
         #Move Ghosts one step
         for ghost in ghosts:
-            action = ghost.step(pacman.pos, current_state)
+            action = ghost.step(current_state)
             #If the ghost has moved, update the maze
             if action != AgentAction.STOP:
                 grid.update(ghost_info[ghost.name], ghost.pos)
@@ -175,10 +175,13 @@ while running:
 
             # Respawn pacman at start if caught
             if ghost.get_position() == pacman.pos:
+                print("Ghost caught pac-man!")
                 pacman.reset_position()
                 # Reset ghosts at start
                 for ghost in ghosts:
                     ghost.reset_position()
+                    grid.update(ghost_info[ghost.name], ghost.pos)
+                    ghost_info[ghost.name] = ghost.pos
                 break
 
     # Draw everything

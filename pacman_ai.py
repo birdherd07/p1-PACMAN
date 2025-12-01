@@ -54,7 +54,10 @@ class PacmanAI (GameAgent):
         return []  # No path found
 
     def set_targets(self, targets):
-        """Compute a path to each of the target pellets."""
+        """
+        Compute a path to each of the target pellets.
+        :param targets: list of target pellet coordinates.
+        """
         paths = []
         for target in targets:
             path = self.bfs(self.pos, target)
@@ -65,22 +68,25 @@ class PacmanAI (GameAgent):
     
     def _performance_measure(self, paths):
         """ 
-        Return a list of scores, measured for maximizing efficiency (shorter length) and penalizing revisits to visited cells. 
+        Return a list of scores, measured for maximizing efficiency (shorter length) and penalizing revisits to cells. 
         :param paths: List of possible paths the agent can take.
         """
         scored_points = []
         for path in paths:
             if path:
+                # Paths with more revisited cells score lower
                 penalty = len(self.visited_cells.intersection(set(path))) * 3
+                # Discourage oscillating behavior
                 oscillation_penalty = 100 if self.prev_pos in path else 0
                 scored_points.append(500 - len(path) - penalty - oscillation_penalty)
         return scored_points
 
     def step(self, current_state, targets):
         """Advance one grid cell along current path."""
-        action, percept = self.pick_action(current_state)
+        action = self.pick_action(current_state)
 
-        if action == AgentAction.MOVE or action == AgentAction.AVOID:
+        if action == AgentAction.MOVE:
+            # Move toward next target
             paths = self.set_targets(targets)
             if paths:
                 # Score potential moves
@@ -101,29 +107,26 @@ class PacmanAI (GameAgent):
                 # Move to next position in path
                 if self.path:
                     self.prev_pos = self.pos
+                    self.visited_cells.add(self.pos)
                     self.pos = self.path.pop(0)
-                    self.visited_cells.add(self.prev_pos)
-        # elif action == AgentAction.AVOID:
-        #     # Move away from other agents
-        #     valid_moves = []
-        #     for neigh in self._neighbors_list():
-        #         if not self._adjacent_agent(neigh):
-        #             valid_moves.append(neigh)
-        #     if valid_moves:
-        #         self.prev_pos = self.pos
-        #         self.visited_cells.add(self.prev_pos)
-        #         self.pos = valid_moves[random.randint(0, (len(valid_moves) - 1))]
-
-
-    def get_position(self):
-        """Get current position"""
-        return self.pos
+        elif action == AgentAction.AVOID:
+            # Move away from other agents
+            self.path = []
+            valid_moves = []
+            for neigh in self._neighbors_list():
+                if not self._adjacent_agent(neigh):
+                    valid_moves.append(neigh)
+            if valid_moves:
+                self.prev_pos = self.pos
+                self.visited_cells.add(self.pos)
+                self.pos = valid_moves[random.randint(0, (len(valid_moves) - 1))]
 
     def has_path(self):
         """Check if Pac-Man has a path to follow"""
         return len(self.path) > 0
     
     def reset_position(self):
+        """Sets this agent's position to its starting position and resets path."""
         super().reset_position()
         #Clear old path
         self.path = []
