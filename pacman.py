@@ -46,6 +46,9 @@ score_tracker = ScoreTracker(total_pellets=len(pellets))
 # ---------- Pac-Man AI Agent ----------
 pacman_start = (1, 1)
 pacman = PacmanAI(start_pos=pacman_start, maze=maze)
+pac1 = pygame.image.load('assets/pac1.png')
+pac2 = pygame.image.load('assets/pac2.png')
+pacimage = pac1
 
 # ---------- Ghost obstacles ----------
 # Ghost name and last known position
@@ -104,8 +107,11 @@ def draw():
             pygame.draw.line(window, (0, 255, 0), start, end, 2)
     
     # Draw Pac-Man
-    cx, cy = grid_to_pixel(pacman.pos)
-    pygame.draw.circle(window, (255, 255, 0), (cx, cy), CELL//2 - 2)
+    # cx, cy = grid_to_pixel(pacman.pos)
+    # pygame.draw.circle(window, (255, 255, 0), (cx, cy), CELL//2 - 2)
+
+    cx, cy = pacman.pos
+    window.blit(pacimage, (cx * CELL, cy * CELL))
 
     # Draw Ghosts
     for ghost in ghosts:
@@ -150,6 +156,7 @@ while running:
             
         # Find pac-man's nearest target if pellets remain
         if current_state == GameState.ACTING:
+            pacimage = pac2 if pacimage == pac1 else pac1
             targets = nearest_pellets(pacman.pos, pellets)
             #pacman.set_target(target)
             pacman.step(current_state, targets)
