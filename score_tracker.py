@@ -53,7 +53,11 @@ class ScoreTracker:
             width: Window width
             height: Window height
         """
-        font = pygame.font.Font(None, 36)
+        try: 
+            font = pygame.font.Font('assets/BitCountGridSingle.ttf', 20)
+        except Exception:
+            font = pygame.font.Font(None, 36)
+        
         
         # Draw score
         score_text = font.render(f"Score: {self.score}", True, (255, 255, 255))

@@ -13,6 +13,7 @@ class PacmanAI (GameAgent):
         self.pos = start_pos
         self.prev_pos = start_pos
         self.start_pos = start_pos
+        self.performance_measure = 0
         self.maze = maze
         self.path = []  # list of grid cells to walk through
         self.visited_cells = set()  # Track visited cells for visualization
@@ -94,6 +95,8 @@ class PacmanAI (GameAgent):
                 # Update path to best scored path
                 best_index = performance_scores.index(max(performance_scores))
                 self.path = paths[best_index]
+                # Update the performance measure
+                self.performance_measure += performance_scores[best_index]
 
                 if self.path:
                     print(f"Found path from {self.pos} to {self.path[-1]}: {len(self.path)} steps")

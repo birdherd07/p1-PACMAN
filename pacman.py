@@ -190,7 +190,6 @@ while running:
 
 # Cleanup
 
-print(f"\nGame Over! Final Score: {score}")
 score_tracker.print_stats()
 pygame.quit()
 sys.exit()
